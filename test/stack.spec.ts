@@ -73,3 +73,19 @@ it('Errors on out of order case', async () => {
 
     await myStack.commit();
 });
+
+it.skip('Allows for interactive confirmation of each commit', async () => {
+
+});
+
+it.skip('Generates Cloud formation script as it commits', async () => {
+
+});
+
+it.skip('Generates diff between commits to understand required changes', async () => {
+
+});
+
+it.skip('Loads existing cloudformation to ensure old resources are not recreated', async () => {
+
+});
