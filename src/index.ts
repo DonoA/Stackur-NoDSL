@@ -23,6 +23,9 @@ export abstract class Stack {
     private name: string;
     private props?: StackProps;
 
+    private exists: boolean = false;
+    private commited: boolean = false;
+
     // This is where the defaults will go. The pattern of optional props followed by 
     // constant defaults should used in all other resource classes as well (such as Bucket)
     private static DEFAULT_PROPS: StackProps = {
@@ -43,13 +46,37 @@ export abstract class Stack {
     // TODO: Go create this stack. Add any items that are not already commited.
     // This will create the stack in Cloudformation if it does not already exist.
     async commit(): Promise<void> {
-        await this.setup()
-        
-        // ....
+        await this.setup();
+
+        let prevCommited = this.resoruces[0].commited;
+        for(const resource of this.resoruces) {
+            if(!prevCommited && resource.commited) {
+                throw new Error(`Out of order initialization of ${resource.id}`);
+            }
+
+            prevCommited = resource.commited;
+            await resource.commit();
+        }
     }
-    
+
     addResource(resource: Resource) {
         this.resoruces.push(resource);
+    }
+
+    isCommited(): boolean {
+        return this.commited;
+    }
+
+    getName(): string {
+        return this.name;
+    }
+
+    getExists(): boolean {
+        return this.exists;
+    }
+
+    setExists(v: boolean) {
+        this.exists = v;
     }
 }
 
@@ -60,21 +87,35 @@ export abstract class Stack {
  */
 export abstract class Resource {
     protected stack: Stack;
+    readonly id: string;
 
     public commited: boolean = false;
 
-    constructor(stack: Stack) {
+    constructor(stack: Stack, id: string) {
         this.stack = stack;
+        this.id = id;
         stack.addResource(this);
     }
 
+    /**
+     * Modifies the parent stack to create this resource. Boolean indicates 
+     * if the resource needed commiting or not. This function should only 
+     * be called once per resource.
+     */
     async commit(): Promise<boolean> {
         if(this.commited) {
             return true;
         }
         this.commited = true;
 
-        // TODO: if the stack this bucket is a part of doesn't exist, create the stack
+        // exit if the stack for this resource already exists
+        if(this.stack.getExists()) {
+            return false;
+        }
+
+        // TODO: if the stack this resource is a part of doesn't exist, create the stack
+        console.log(`Create stack ${this.stack.getName()}`);
+        this.stack.setExists(true);
 
         return false;
     };
@@ -84,11 +125,9 @@ export abstract class Resource {
 
 /**
  * All properties that can be attached to an S3 bucket. 
- * This is a copy of BucketProps in the base CDK package. (Maybe we should just import it)
+ * We use the cdk bucket props class because it's just an interface
  */
-export interface BucketProps {
-    bucketName?: string
-}
+import { BucketProps } from '@aws-cdk/aws-s3';
 
 /**
  * An S3 bucket resource. One of the most simple resources 
@@ -96,7 +135,6 @@ export interface BucketProps {
  */
 export class Bucket extends Resource {
     
-    private name: string;
     private props?: BucketProps;
 
     private static DEFAULT_PROPS: BucketProps = {
@@ -104,8 +142,7 @@ export class Bucket extends Resource {
     };
 
     constructor(stack: Stack, id: string, props?: BucketProps) {
-        super(stack);
-        this.name = name;
+        super(stack, id);
         this.props = props;
     }
 
@@ -117,6 +154,7 @@ export class Bucket extends Resource {
         }
 
         // update the stack cloudformation with a definition for this bucket and update the stack in AWS
+        console.log(`Bucket ${this.id} was commited!`);
 
         return false;
     }
