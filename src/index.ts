@@ -39,12 +39,27 @@ export abstract class Stack {
         this.props = props;
     }
 
+    /**
+     * Designed to be overridden by sub-classes. Essentially an async constructor for 
+     * setting up resources that may require async operations to be performed. Should 
+     * be used over constructor resource definitions whenever possible.
+     */
     protected async setup(): Promise<void> { };
 
-    async destroy(): Promise<void> { };
+    /**
+     * Designed to be overridden by sub-classes. Some resources may require special 
+     * destruction steps. That extra logic goes here.
+     * 
+     * This method might run before or after the AWS stack is deleted. (After is probably the best)
+     */
+    protected async destroy(): Promise<void> { };
 
-    // TODO: Go create this stack. Add any items that are not already commited.
-    // This will create the stack in Cloudformation if it does not already exist.
+    /**
+     * Commits all uncommited resources within the stack. Essentially creates the stack in AWS.
+     * 
+     * TODO: Go create this stack. Add any items that are not already commited.
+     * This will create the stack in Cloudformation if it does not already exist.
+     */
     async commit(): Promise<void> {
         await this.setup();
 
@@ -98,9 +113,22 @@ export abstract class Resource {
     }
 
     /**
-     * Modifies the parent stack to create this resource. Boolean indicates 
-     * if the resource needed commiting or not. This function should only 
-     * be called once per resource.
+     * Modifies the parent stack to create this resource. 
+     * This function should only be called once per resource.
+     * 
+     * Maybe this function should also run all post setup steps so that they are 
+     * also only executed once... maybe not. One major concern with adding any old 
+     * logic to resource creation is that it might not need to be executed on every 
+     * deploy. There should be a way of asserting that configuration (like adding a 
+     * default file to an S3 bucket) is only run on resource creation.
+     * 
+     * Custom resource confiurations are not discrete so they cannot be reversed quite 
+     * like stack resources. Many CDK resources already solve this problem through 
+     * lambda use. We should examine those implementations to understand how we can 
+     * apply similar functionality here.
+     * 
+     * @returns A boolean representing if the object has already 
+     *          been committed.
      */
     async commit(): Promise<boolean> {
         if(this.commited) {
@@ -120,6 +148,12 @@ export abstract class Resource {
         return false;
     };
 
+    /**
+     * This should generate the needed cloud formation code to insert into the YAML file.
+     * This might be helpful or it might not. Unclear.
+     * 
+     * @returns The YAML code
+     */
     abstract generateCf(): string;
 }
 
@@ -146,8 +180,14 @@ export class Bucket extends Resource {
         this.props = props;
     }
 
+    /**
+     * For example, the commit method of the bucket class should add some YAML
+     * code to the parent stack that defines a bucket. If a definition for this
+     * bucket already exists, we should simply update that bucket with new
+     * configuration.
+     */
     async commit(): Promise<boolean> {
-        // if this item was already commited, no need to do it again. 
+        // if this item was already commited, no need to do it again.
         // This will need to be in all commit implementations
         if(await super.commit()) {
             return true;
