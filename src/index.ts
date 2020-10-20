@@ -163,19 +163,21 @@ export abstract class Resource {
  */
 import { BucketProps } from '@aws-cdk/aws-s3';
 
+import { CloudFormation } from 'aws-sdk';
+
 /**
  * An S3 bucket resource. One of the most simple resources 
  * to allocate which is why it is used here.
  */
 export class Bucket extends Resource {
     
-    private props?: BucketProps;
+    private props: BucketProps;
 
     private static DEFAULT_PROPS: BucketProps = {
         bucketName: "I_HAVE_NO_IDEA"
     };
 
-    constructor(stack: Stack, id: string, props?: BucketProps) {
+    constructor(stack: Stack, id: string, props: BucketProps = {}) {
         super(stack, id);
         this.props = props;
     }
@@ -193,6 +195,39 @@ export class Bucket extends Resource {
             return true;
         }
 
+        const cf = this.generateCf();
+        console.log(cf);
+        const cfClient = new CloudFormation();
+        const createRes = await cfClient.createStack({
+            StackName: this.stack.getName(),
+            TemplateBody: cf,
+        }).promise();
+
+        await new Promise((res, rej) => {
+            const itervalId = setInterval(() => {
+                cfClient.describeStackEvents({
+                    StackName: this.stack.getName()
+                }).promise().then((eventRes) => {
+                    const events = (eventRes.$response.data || {}).StackEvents;
+                    events?.forEach((event) => {
+                        console.log(`${event.ResourceStatus} => ${event.ResourceStatusReason}`);
+                        console.log(event.ResourceType);
+                        console.log(event.ResourceProperties);
+                    });
+                    console.log('=============');
+                    const latest = events?.[0];
+                    if(latest?.ResourceStatus === 'ROLLBACK_COMPLETE') {
+                        clearInterval(itervalId);
+                        res();
+                    }
+                    if(latest?.ResourceStatus === 'CREATE_COMPLETE' && latest?.ResourceType === 'AWS::CloudFormation::Stack') {
+                        clearInterval(itervalId);
+                        res();
+                    }
+                });
+            }, 5 * 1000);
+        });
+
         // update the stack cloudformation with a definition for this bucket and update the stack in AWS
         console.log(`Bucket ${this.id} was commited!`);
 
@@ -200,6 +235,21 @@ export class Bucket extends Resource {
     }
 
     generateCf(): string {
-        return "THIS IS A BUCKET";
+        const updatedProps: any = {};
+        const keys = Object.keys(this.props);
+        keys.forEach((e) => {
+            const newName = e.charAt(0).toUpperCase() + e.slice(1);
+            updatedProps[newName] = (this.props as any)[e];
+        });
+
+        return JSON.stringify({
+            AWSTemplateFormatVersion: "2010-09-09",
+            Resources: {
+                [this.id]: {
+                    "Type": "AWS::S3::Bucket",
+                    "Properties": updatedProps
+                }
+            }
+        });
     }
 }
