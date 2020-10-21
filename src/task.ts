@@ -1,4 +1,4 @@
-import { Commitable } from './commitable';
+import { Committable } from './commitable';
 import { Stack } from './stack';
 
 type TaskCallback = () => Promise<void> | void;
@@ -9,7 +9,12 @@ interface TaskProps {
     condition?: TaskCondition;
 }
 
-export class Task extends Commitable {
+/**
+ * Defines a task to be executed while setting up resources.
+ * Tasks are conditional logic that will be executed in order 
+ * they are defined like resources.
+ */
+export class Task extends Committable {
     private stack: Stack;
     private task: TaskCallback;
     private condition?: TaskCondition;
@@ -23,6 +28,12 @@ export class Task extends Commitable {
         this.stack.addStage(this);
     }
 
+    /**
+     * Execute the task. The task will only be run if the condition passes 
+     * or force = true.
+     * 
+     * @param force Force the task to execute regardless of condition
+     */
     async commit(force: boolean = false) {
         let condResult = this.condition?.();
         if(condResult instanceof Promise) {

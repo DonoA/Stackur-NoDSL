@@ -18,10 +18,14 @@ const CLEANUP = true;
 describe('NoDSL', function() {
     let testId: string;
     
+    // Before each test, generate a new testId. This is used to ensure values 
+    // within the tests do not conflict (all stacks will be created at the same 
+    // time and must have unique names)
     beforeEach(() => {
         testId = `${process.env.USER}${new Date().getTime()}`;
     })
 
+    // Set test timeout to 10 min. Creating stacks is hard work!
     this.timeout(10 * 60 * 1000);
 
     // After all tests are run, delete all stacks that were created
@@ -106,7 +110,7 @@ describe('NoDSL', function() {
         await myStack.commit();
     });
 
-    it('Handles non-vanilla CDK code 2', async () => {
+    it('Handles resource and task mixing', async () => {
         class MyComplexStack extends Stack {
             public storage?: Bucket;
             public storage2?: Bucket;

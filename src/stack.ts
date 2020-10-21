@@ -1,6 +1,5 @@
 import { CFEngine } from './cf_engine';
-import { Commitable } from './commitable';
-import { Resource } from './resource';
+import { Committable } from './commitable';
 
 /**
  * Interface that defines the configuration that can be applied to any stack
@@ -37,7 +36,7 @@ export abstract class Stack {
         workingDir: "./output"
     };
 
-    private stages: Commitable[] = [];
+    private stages: Committable[] = [];
 
     constructor(name: string, props?: StackProps) {
         this.name = name;
@@ -50,21 +49,23 @@ export abstract class Stack {
      * setting up resources that may require async operations to be performed. Should 
      * be used over constructor resource definitions whenever possible.
      */
-    protected async setup(): Promise<void> { };
+    protected async setup() { };
 
     /**
      * Designed to be overridden by sub-classes. Some resources may require special 
      * destruction steps. That extra logic goes here.
      * 
-     * This method might run before or after the AWS stack is deleted. (After is probably the best)
+     * This method must run deleteAllResources, some logic should be added to ensure 
+     * that happens
      */
-    protected async destroy(): Promise<void> { };
+    protected async destroy() { };
+
+    protected async deleteAllResources() {
+        
+    }
 
     /**
      * Commits all uncommited resources within the stack. Essentially creates the stack in AWS.
-     * 
-     * TODO: Go create this stack. Add any items that are not already commited.
-     * This will create the stack in Cloudformation if it does not already exist.
      */
     async commit(): Promise<void> {
         this.commited = true;
@@ -79,7 +80,7 @@ export abstract class Stack {
         await this.engine.commit();
     }
 
-    addStage(resource: Commitable) {
+    addStage(resource: Committable) {
         this.stages.push(resource);
     }
 

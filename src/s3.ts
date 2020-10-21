@@ -34,10 +34,7 @@ export class Bucket extends Resource {
         this.props = props;
     }
 
-    /**
-     * The commit method is used to modify (and possibly commit) the 
-     * backing CF engine for this object.
-     */
+    
     async commit() {
         await super.commit();
 
