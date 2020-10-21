@@ -1,4 +1,5 @@
 import { CFEngine } from './cf_engine';
+import { Commitable } from './commitable';
 import { Resource } from './resource';
 
 /**
@@ -36,7 +37,7 @@ export abstract class Stack {
         workingDir: "./output"
     };
 
-    private resoruces: Resource[] = [];
+    private stages: Commitable[] = [];
 
     constructor(name: string, props?: StackProps) {
         this.name = name;
@@ -66,26 +67,20 @@ export abstract class Stack {
      * This will create the stack in Cloudformation if it does not already exist.
      */
     async commit(): Promise<void> {
+        this.commited = true;
         await this.setup();
         await this.engine.setup();
 
-        let prevCommited = this.resoruces[0].commited;
-        for(const resource of this.resoruces) {
-            if(!prevCommited && resource.commited) {
-                throw new Error(`Out of order initialization of ${resource.id}`);
-            }
-
-            prevCommited = resource.commited;
+        for(const resource of this.stages) {
             await resource.commit(true);
         }
 
-        this.engine.dumpCF();
+        // just to clean up anything that didn't get commited for some reason
         await this.engine.commit();
-        this.engine.dumpCF();
     }
 
-    addResource(resource: Resource) {
-        this.resoruces.push(resource);
+    addStage(resource: Commitable) {
+        this.stages.push(resource);
     }
 
     isCommited(): boolean {
@@ -95,9 +90,4 @@ export abstract class Stack {
     getName(): string {
         return this.name;
     }
-
-    getExists(): boolean {
-        return this.exists;
-    }
-
 }

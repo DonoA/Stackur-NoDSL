@@ -55,7 +55,7 @@ export class CFEngine {
         await this.getRemoteTemplate();
     }
 
-    async getRemoteTemplate(): Promise<CFTemplate | undefined> {
+    private async getRemoteTemplate(): Promise<CFTemplate | undefined> {
         if (!this.stackExists) {
             return undefined;
         }
@@ -78,7 +78,7 @@ export class CFEngine {
         this.localTemplate.Resources[name] = resource;
     }
 
-    async getEvents(): Promise<CloudFormation.StackEvent[]> {
+    private async getEvents(): Promise<CloudFormation.StackEvent[]> {
         const res = await this.client.describeStackEvents({
             StackName: this.stackName
         }).promise();
@@ -86,13 +86,12 @@ export class CFEngine {
         return res.StackEvents || [];
     }
 
-    async watchNewEvents<T>(callback: (event: CloudFormation.StackEvent) => Promise<T>) {
+    private async watchNewEvents<T>(callback: (event: CloudFormation.StackEvent) => Promise<T>) {
         let eventCount = (await this.getEvents()).length;
         return new Promise((res, rej) => {
             const itervalId = setInterval(() => {
                 this.getEvents().then(async (events) => {
-                    const newEventCount = (await this.getEvents()).length;
-                    const newEvents = newEventCount - eventCount;
+                    const newEvents = events.length - eventCount;
                     for (let index = 0; index < newEvents; index++) {
                         const rtn = await callback(events[newEvents - index - 1]);
                         if (rtn !== undefined) {
@@ -100,7 +99,7 @@ export class CFEngine {
                             res(rtn);
                         }
                     }
-                    eventCount = newEventCount;
+                    eventCount = events.length;
                 });
             }, 5 * 1000);
         });
@@ -131,29 +130,6 @@ export class CFEngine {
 
         this.stackExists = true;
         await this.getRemoteTemplate();
-    }
-
-    private async executeChangeSet(changeSetName: string) {
-        await this.client.executeChangeSet({
-            StackName: this.stackName,
-            ChangeSetName: changeSetName,
-        }).promise();
-
-        await this.watchNewEvents(async (event) => {
-            console.log(`${event.ResourceStatus} => ${event.ResourceStatusReason}`);
-            console.log(event.ResourceType);
-            console.log(event.ResourceProperties);
-
-            if (event.ResourceStatus === 'ROLLBACK_COMPLETE') {
-                return true;
-            }
-            if (event.ResourceStatus === 'CREATE_COMPLETE' && event.ResourceType === 'AWS::CloudFormation::Stack') {
-                return true;
-            }
-            if (event.ResourceStatus === 'UPDATE_COMPLETE' && event.ResourceType === 'AWS::CloudFormation::Stack') {
-                return true;
-            }
-        });
     }
 
     private async createChangeSet(changeSetName: string): Promise<CloudFormation.DescribeChangeSetOutput> {
@@ -193,6 +169,31 @@ export class CFEngine {
             }, 5 * 1000);
         });
     }
+
+    private async executeChangeSet(changeSetName: string) {
+        await this.client.executeChangeSet({
+            StackName: this.stackName,
+            ChangeSetName: changeSetName,
+        }).promise();
+
+        await this.watchNewEvents(async (event) => {
+            console.log(`${event.ResourceStatus} => ${event.ResourceStatusReason}`);
+            console.log(event.ResourceType);
+            console.log(event.ResourceProperties);
+
+            if (event.ResourceStatus === 'ROLLBACK_COMPLETE') {
+                return true;
+            }
+            if (event.ResourceStatus === 'CREATE_COMPLETE' && event.ResourceType === 'AWS::CloudFormation::Stack') {
+                return true;
+            }
+            if (event.ResourceStatus === 'UPDATE_COMPLETE' && event.ResourceType === 'AWS::CloudFormation::Stack') {
+                return true;
+            }
+        });
+    }
+
+    
 
     generateCF(): string {
         return JSON.stringify(this.localTemplate);

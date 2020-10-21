@@ -1,6 +1,6 @@
 import { Stack } from './stack';
 import { Resource } from './resource';
-import { Tag } from './tag';
+import { iTag } from './tag';
 
 /**
  * All properties that can be attached to an S3 bucket. 
@@ -11,7 +11,7 @@ import { Tag } from './tag';
 import { BucketProps as CDKBucketProps } from '@aws-cdk/aws-s3';
 
 interface NDSLBucketProps {
-    tags?: Tag[];
+    tags?: iTag[];
 };
 
 type BucketProps = CDKBucketProps & NDSLBucketProps;
@@ -23,7 +23,6 @@ export { BucketProps };
  * to allocate which is why it is used here.
  */
 export class Bucket extends Resource {
-    
     private props: BucketProps;
 
     private static DEFAULT_PROPS: BucketProps = {
@@ -39,8 +38,8 @@ export class Bucket extends Resource {
      * The commit method is used to modify (and possibly commit) the 
      * backing CF engine for this object.
      */
-    async commit(soft: boolean = false) {
-        await super.commit(soft);
+    async commit() {
+        await super.commit();
 
         const updatedProps: {[id: string]: any} = {};
         const keys = Object.keys(this.props);
@@ -54,9 +53,7 @@ export class Bucket extends Resource {
         });
 
         // update the stack cloudformation with a definition for this bucket and update the stack in AWS
-        if(!soft) {
-            await this.stack.engine.commit();
-        }
+        await this.stack.engine.commit();
 
         console.log(`Bucket ${this.id} was commited!`);
     }

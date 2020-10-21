@@ -1,4 +1,4 @@
-import { Stack, StackProps, Bucket } from '../src';
+import { Stack, StackProps, Bucket, Task } from '../src';
 import { expect } from 'chai';
 import AWS from 'aws-sdk';
 import { CloudFormation } from 'aws-sdk';
@@ -47,7 +47,7 @@ describe('NoDSL', function() {
         }
     });
 
-    it('Handles vanilla CDK code', async function() {
+    it.skip('Handles vanilla CDK code', async function() {
         class MySimpleStack extends Stack {
             public storage: Bucket;
         
@@ -65,13 +65,13 @@ describe('NoDSL', function() {
         }
             
         // Create a new instance of this stack, this would likely be one stage. Lets pretend it's beta.
-        const myStack = new MySimpleStack("StackCloudFormationIDMySimpleStack");
+        const myStack = new MySimpleStack(`MySimpleStack${testId}`);
     
         // actually go create this thing (this part is not in the CDK and would need to be added to existing CDK scripts)
         await myStack.commit();
     });
     
-    it('Handles non-vanilla CDK code', async () => {
+    it.skip('Handles non-vanilla CDK code', async () => {
         class MyComplexStack extends Stack {
             public storage?: Bucket;
         
@@ -82,42 +82,59 @@ describe('NoDSL', function() {
                     bucketName: `stackur-public-bucket-${testId}`
                 });
         
-                // Since we want to interact with this bucket immediately, we should commit it immediately
-                await this.storage.commit();
-        
-                console.log("Some custom logic!");
-                console.log("Notice that logic was executed after resources were created...GOOD!");
+                new Task(this, {
+                    task: async () => {
+                        console.log("Some custom logic!");
+                    },
+                    condition: async () => {
+                        return true;
+                    }
+                });
+
+                new Task(this, {
+                    task: async () => {
+                        console.log("Notice that logic was executed after resources were created...GOOD!");
+                    }
+                });
             }
         }
         
-        const myStack = new MyComplexStack("StackCloudFormationIDMyComplexStack");
+        const myStack = new MyComplexStack(`MyComplexStack${testId}`);
     
         // actually go create this thing. I don't care that the stack has a post 
         // constructor setup stage because commit takes care of that
         await myStack.commit();
     });
-    
-    it.skip('Errors on out of order case', async () => {
-        class MyStack extends Stack {
-            public bucket1?: Bucket;
-            public bucket2?: Bucket;
+
+    it('Handles non-vanilla CDK code 2', async () => {
+        class MyComplexStack extends Stack {
+            public storage?: Bucket;
+            public storage2?: Bucket;
         
+            // Notice that creation logic moved to the setup method
             protected async setup(): Promise<void> {
-                this.bucket1 = new Bucket(this, "CloudFormationID1", {
-                    bucketName: "PublicName2"
-                });
-    
-                this.bucket2 = new Bucket(this, "CloudFormationID2", {
-                    bucketName: "PublicName2"
+                // Allocate bucket as before
+                this.storage = new Bucket(this, "Bucket1", {
+                    bucketName: `stackur-public-bucket-${testId}`
                 });
         
-                // Commit bucket2 before bucket1 (scarry!)
-                await this.bucket2.commit();
+                new Task(this, {
+                    task: async () => {
+                        console.log("Some custom logic!");
+                        console.log("Notice that logic was executed after resources were created...GOOD!");
+                    }
+                });
+
+                this.storage2 = new Bucket(this, "Bucket2", {
+                    bucketName: `stackur-public-bucket2-${testId}`
+                });
             }
         }
         
-        const myStack = new MyStack("StackCloudFormationID_MyStack");
+        const myStack = new MyComplexStack(`MyComplexStack${testId}`);
     
+        // actually go create this thing. I don't care that the stack has a post 
+        // constructor setup stage because commit takes care of that
         await myStack.commit();
     });
     

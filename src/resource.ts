@@ -1,3 +1,4 @@
+import { Commitable } from './commitable';
 import { Stack } from './stack';
 
 /**
@@ -5,16 +6,16 @@ import { Stack } from './stack';
  * 
  * An individual resource can be commited on it's own or in a stack.
  */
-export abstract class Resource {
+export abstract class Resource extends Commitable {
     protected stack: Stack;
     readonly id: string;
-
-    public commited: boolean = false;
+    public arn?: string;
 
     constructor(stack: Stack, id: string) {
+        super();
         this.stack = stack;
         this.id = id;
-        stack.addResource(this);
+        stack.addStage(this);
     }
 
     /**
@@ -33,15 +34,7 @@ export abstract class Resource {
      * apply similar functionality here.
      * 
      */
-    async commit(soft: boolean = false) {
+    async commit() {
         this.commited = true;
     }
-
-    /**
-     * This should generate the needed cloud formation code to insert into the YAML file.
-     * This might be helpful or it might not. Unclear.
-     * 
-     * @returns The YAML code
-     */
-    // abstract generateCf(): string;
 }
