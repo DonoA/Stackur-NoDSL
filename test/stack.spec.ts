@@ -2,6 +2,7 @@ import { Stack, StackProps, Bucket } from '../src';
 import { expect } from 'chai';
 import AWS from 'aws-sdk';
 import { CloudFormation } from 'aws-sdk';
+
 import fs from 'fs';
 
 const keys = JSON.parse(fs.readFileSync('./secrets.json', 'utf-8'));
@@ -11,11 +12,19 @@ AWS.config.update({
     region: 'us-east-2'
 });
 
+// const CLEANUP = false;
 const CLEANUP = true;
 
 describe('NoDSL', function() {
+    let testId: string;
+    
+    beforeEach(() => {
+        testId = `${process.env.USER}${new Date().getTime()}`;
+    })
+
     this.timeout(10 * 60 * 1000);
 
+    // After all tests are run, delete all stacks that were created
     after(async function() {
         if(!CLEANUP) {
             return;
@@ -28,7 +37,7 @@ describe('NoDSL', function() {
             if(stack.StackStatus === 'DELETE_COMPLETE') {
                 continue;
             }
-            const res = await cfClient.deleteStack({
+            await cfClient.deleteStack({
                 StackName: stack.StackName
             }).promise();
             await cfClient.waitFor('stackDeleteComplete', {
@@ -46,7 +55,8 @@ describe('NoDSL', function() {
                 super(name, props);
         
                 this.storage = new Bucket(this, "CloudFormationIDSimpleBucket", {
-                    bucketName: "stackur-public-bucket"
+                    bucketName: `stackur-public-bucket-${testId}`,
+                    // tags: [{Key: 'SampleTag', Value: 'TagValue'}],
                 });
     
                 console.log("Some custom logic!");
@@ -61,15 +71,15 @@ describe('NoDSL', function() {
         await myStack.commit();
     });
     
-    it.skip('Handles non-vanilla CDK code', async () => {
+    it('Handles non-vanilla CDK code', async () => {
         class MyComplexStack extends Stack {
             public storage?: Bucket;
         
             // Notice that creation logic moved to the setup method
             protected async setup(): Promise<void> {
                 // Allocate bucket as before
-                this.storage = new Bucket(this, "CloudFormationID_ComplexStack", {
-                    bucketName: "PublicName"
+                this.storage = new Bucket(this, "CloudFormationIDComplexStack", {
+                    bucketName: `stackur-public-bucket-${testId}`
                 });
         
                 // Since we want to interact with this bucket immediately, we should commit it immediately
@@ -80,7 +90,7 @@ describe('NoDSL', function() {
             }
         }
         
-        const myStack = new MyComplexStack("StackCloudFormationID_MyComplexStack");
+        const myStack = new MyComplexStack("StackCloudFormationIDMyComplexStack");
     
         // actually go create this thing. I don't care that the stack has a post 
         // constructor setup stage because commit takes care of that
