@@ -41,6 +41,10 @@ describe('NoDSL', function() {
             if(stack.StackStatus === 'DELETE_COMPLETE') {
                 continue;
             }
+            console.log(stack.StackName);
+            if(!stack.StackName.includes(process.env.USER as string)) {
+                continue;
+            }
             await cfClient.deleteStack({
                 StackName: stack.StackName
             }).promise();
