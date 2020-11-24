@@ -24,18 +24,16 @@ export class Interaction {
         rl.question("Do you accept these changes? [y/n] ", (answer) => {
             switch (answer.toLowerCase()) {
                 case "y":
-                    console.log("Super!");
+                    console.log("Changes Accepted");
                     return true;
                 case "n":
-                    console.log("Sorry! :(");
+                    console.log("Changed Denied");
                     return false;
                 default:
-                    console.log("Invalid answer!");
+                    console.log("Invalid character, please use y or n");
             }
             rl.close();
         });
         return false;
     }
-
-    // promptUser() {}
 }
