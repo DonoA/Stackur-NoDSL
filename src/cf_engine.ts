@@ -23,6 +23,10 @@ export interface CFTemplate {
  * constructed. An valid resource can be inserted into the CFEngine and it
  * will be sent to CloudFormation for creation.
  */
+
+// Flag for either allowing user confirmation to the changes or not
+let allowUserInteraction = true;
+
 export class CFEngine {
     private stackName: string;
     private client: CloudFormation;
@@ -185,16 +189,29 @@ export class CFEngine {
         console.log("CHANGESET");
         // console.log(changeSet);
         let userInteraction = new Interaction();
-        await userInteraction.parseChangeSet(changeSet);
 
-        // changeSet.Changes?.forEach((change) => {
-        //     console.log(JSON.stringify(change, undefined, 2));
-        // });
+        if (allowUserInteraction == true) {
+            let allow = await userInteraction.confirmChanges(changeSet);
+            if (allow == true) {
+                await this.executeChangeSet(changeSetName);
+                this.stackExists = true;
+                await this.getRemoteTemplate();
+            } else {
+                console.log(
+                    "Changes not accepted\nPlease make proper changes and accept to commit"
+                );
+            }
+        } else {
+            console.log(changeSet);
+            changeSet.Changes?.forEach((change) => {
+                console.log(JSON.stringify(change, undefined, 2));
+            });
 
-        await this.executeChangeSet(changeSetName);
+            await this.executeChangeSet(changeSetName);
 
-        this.stackExists = true;
-        await this.getRemoteTemplate();
+            this.stackExists = true;
+            await this.getRemoteTemplate();
+        }
     }
 
     /**

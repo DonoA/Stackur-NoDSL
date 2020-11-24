@@ -15,13 +15,9 @@ let rl = readline.createInterface({
 });
 
 export class Interaction {
-    private confirmed: boolean;
+    constructor() {}
 
-    constructor() {
-        this.confirmed = false;
-    }
-
-    parseChangeSet(changeSet: object) {
+    confirmChanges(changeSet: object): boolean {
         console.log("These are the changes you want to make:");
         console.log(changeSet);
 
@@ -29,15 +25,16 @@ export class Interaction {
             switch (answer.toLowerCase()) {
                 case "y":
                     console.log("Super!");
-                    break;
+                    return true;
                 case "n":
                     console.log("Sorry! :(");
-                    break;
+                    return false;
                 default:
                     console.log("Invalid answer!");
             }
             rl.close();
         });
+        return false;
     }
 
     // promptUser() {}
