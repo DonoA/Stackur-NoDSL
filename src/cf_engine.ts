@@ -170,7 +170,8 @@ export class CFEngine {
         const changeSetName = `${process.env.USER}-${new Date().getTime()}`;
 
         const changeSet = await this.createChangeSet(changeSetName);
-
+        // let thing = typeof changeSet;
+        // console.log(thing);
         // do nothing if we can
         if (changeSet.StatusReason?.includes("didn't contain changes.")) {
             console.log("no changes required!");
@@ -186,11 +187,12 @@ export class CFEngine {
 
         // TODO This is where we want the user to accept or deny the changeset
         // create some class that give the user
-        console.log("CHANGESET");
+        // console.log("CHANGESET");
         // console.log(changeSet);
         let userInteraction = new Interaction();
 
         if (allowUserInteraction == true) {
+            // let allow = true;
             let allow = await userInteraction.confirmChanges(changeSet);
             if (allow == true) {
                 await this.executeChangeSet(changeSetName);
