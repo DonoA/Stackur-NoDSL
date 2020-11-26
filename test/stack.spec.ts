@@ -129,7 +129,7 @@ describe("NoDSL", function () {
         await myStack.commit();
     });
 
-    it("Handles resource and task mixing", async () => {
+    it.skip("Handles resource and task mixing", async () => {
         class MyComplexStack extends Stack {
             public storage?: Bucket;
             public storage2?: Bucket;
@@ -171,5 +171,25 @@ describe("NoDSL", function () {
 
     it.skip("Loads existing cloudformation to ensure old resources are not recreated", async () => {});
 
-    it.skip("User interaction element succeeded", async () => {});
+    it("Single Resource Commit", async () => {
+        class MyComplexStack extends Stack {
+            public storage?: Bucket;
+
+            // Notice that creation logic moved to the setup method
+            protected async setup(): Promise<void> {
+                // Allocate bucket as before
+                this.storage = new Bucket(this, "Bucket1", {
+                    bucketName: `stackur-public-bucket-${testId}`,
+                });
+            }
+        }
+
+        // readline user input object
+
+        const myStack = new MyComplexStack(`MyComplexStack${testId}`);
+
+        // actually go create this thing. I don't care that the stack has a post
+        // constructor setup stage because commit takes care of that
+        await myStack.commit(true);
+    });
 });

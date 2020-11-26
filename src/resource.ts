@@ -1,9 +1,9 @@
-import { Committable } from './commitable';
-import { Stack } from './stack';
+import { Committable } from "./commitable";
+import { Stack } from "./stack";
 
 /**
  * A super class for all resources that can be placed within a stack.
- * 
+ *
  * An individual resource can be commited on it's own or in a stack.
  */
 export abstract class Resource extends Committable {
@@ -19,24 +19,22 @@ export abstract class Resource extends Committable {
     }
 
     /**
-     * The commit method is used to modify the 
+     * The commit method is used to modify the
      * backing CF engine for this object.
-     * 
-     * This is also where the easy to use interfaces should be 
+     *
+     * This is also where the easy to use interfaces should be
      * translated into cloudformation.
-     * 
+     *
      * This method is essentially a compile method.
      */
-    async commit() {
+    async commit(allowUserInteraction: boolean) {
         this.commited = true;
     }
 
     /**
-     * Run to delete this resource. Often this method is never called 
-     * as the backing CF engine is simply called to destroy the 
+     * Run to delete this resource. Often this method is never called
+     * as the backing CF engine is simply called to destroy the
      * whole stack.
      */
-    async destroy() {
-
-    }
+    async destroy() {}
 }

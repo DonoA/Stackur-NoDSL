@@ -34,8 +34,8 @@ export class Bucket extends Resource {
         this.props = props;
     }
 
-    async commit() {
-        await super.commit();
+    async commit(allowUserInteraction: boolean) {
+        await super.commit(allowUserInteraction);
 
         const updatedProps: { [id: string]: any } = {};
         const keys = Object.keys(this.props);
@@ -49,7 +49,7 @@ export class Bucket extends Resource {
         });
 
         // update the stack cloudformation with a definition for this bucket and update the stack in AWS
-        await this.stack.engine.commit();
+        await this.stack.engine.commit(allowUserInteraction);
 
         console.log(`Bucket ${this.id} was commited!`);
     }

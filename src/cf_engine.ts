@@ -1,5 +1,6 @@
 import { CloudFormation } from "aws-sdk";
 import { Interaction } from "../src/interaction";
+import { exit } from "process";
 export interface CFResource {
     Type: string;
     Properties: any;
@@ -25,7 +26,7 @@ export interface CFTemplate {
  */
 
 // Flag for either allowing user confirmation to the changes or not
-let allowUserInteraction = true;
+// let allowUserInteraction = true;
 
 export class CFEngine {
     private stackName: string;
@@ -166,7 +167,7 @@ export class CFEngine {
      * First a change set is created for the new resources. Then the change
      * set is executed if it is acceptable.
      */
-    async commit() {
+    async commit(allowUserInteraction: boolean) {
         const changeSetName = `${process.env.USER}-${new Date().getTime()}`;
 
         const changeSet = await this.createChangeSet(changeSetName);
@@ -189,31 +190,22 @@ export class CFEngine {
         // create some class that give the user
         // console.log("CHANGESET");
         // console.log(changeSet);
-        let userInteraction = new Interaction();
 
         if (allowUserInteraction == true) {
             // let allow = true;
+            let userInteraction = new Interaction();
             let allow = await userInteraction.confirmChanges(changeSet);
-            if (allow == true) {
-                await this.executeChangeSet(changeSetName);
-                this.stackExists = true;
-                await this.getRemoteTemplate();
-            } else {
+            userInteraction.close();
+            if (allow == false) {
                 console.log(
                     "Changes not accepted\nPlease make proper changes and accept to commit"
                 );
+                return;
             }
-        } else {
-            console.log(changeSet);
-            changeSet.Changes?.forEach((change) => {
-                console.log(JSON.stringify(change, undefined, 2));
-            });
-
-            await this.executeChangeSet(changeSetName);
-
-            this.stackExists = true;
-            await this.getRemoteTemplate();
         }
+        await this.executeChangeSet(changeSetName);
+        this.stackExists = true;
+        await this.getRemoteTemplate();
     }
 
     /**
