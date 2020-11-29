@@ -47,13 +47,13 @@ export class Interaction {
             colWidths: [10, 20, 30, 30],
         });
 
-        console.log("These are the changes you want to make:");
-        console.log(changeSet);
-        console.log("ChangeSet Name: ", changeSet.ChangeSetName);
-        console.log("Stack Name: ", changeSet.StackName);
-        console.log("Changes: ");
+        // console.log("These are the changes you want to make:");
+        // console.log(changeSet);
+        // console.log("ChangeSet Name: ", changeSet.ChangeSetName);
+        // console.log("Stack Name: ", changeSet.StackName);
+        // console.log("Changes: ");
         let rows: any = [];
-        changeSet.Changes?.forEach((change: any) => {
+        changeSet.Changes.forEach((change: any) => {
             let temp = [];
             temp.push(change.Type);
             temp.push(change.ResourceChange.Action);
