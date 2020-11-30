@@ -1,4 +1,4 @@
-import { Stack, StackProps, Bucket, Task } from "../src";
+import { Stack, Bucket, Task } from "../src";
 import * as TestUtils from "./test_utils";
 
 TestUtils.setupAWS();

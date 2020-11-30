@@ -75,5 +75,5 @@ describe("NoDSL Stack", function () {
         await myStack.commit(true);
     });
 
-    it.skip("Generates diff between commits to understand required changes", async () => {});
+    it.skip("Generates diff between commits to understand required changes", async () => { });
 });
