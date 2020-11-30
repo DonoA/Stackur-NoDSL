@@ -1,7 +1,7 @@
 import { Stack } from "./stack";
 import { Resource } from "./resource";
 
-import * as s3 from '@aws-cdk/aws-s3';
+import * as lambda from '@aws-cdk/aws-lambda';
 import { cdkPropTranslate } from './cdk_prop_translate';
 
 /**
@@ -10,22 +10,22 @@ import { cdkPropTranslate } from './cdk_prop_translate';
  * We re-export this class so that users do not need to be aware that
  * this is a CDK class
  */
-import { BucketProps as CDKBucketProps } from "@aws-cdk/aws-s3";
+import { FunctionProps as CDKProps } from "@aws-cdk/aws-lambda";
 
-interface NDSLBucketProps { }
+interface NDSLProps { }
 
-type BucketProps = CDKBucketProps & NDSLBucketProps;
+type FunctionProps = CDKProps & NDSLProps;
 
-export { BucketProps };
+export { FunctionProps };
 
 /**
  * An S3 bucket resource. One of the most simple resources
  * to allocate which is why it is used here.
  */
-export class Bucket extends Resource {
-    private props: BucketProps;
+export class Function extends Resource {
+    private props: FunctionProps;
 
-    constructor(stack: Stack, id: string, props: BucketProps = {}) {
+    constructor(stack: Stack, id: string, props: FunctionProps) {
         super(stack, id);
         this.props = props;
     }
@@ -34,14 +34,14 @@ export class Bucket extends Resource {
         await super.commit(allowUserInteraction);
 
         const templates = cdkPropTranslate((stack) => {
-            new s3.Bucket(stack, this.id, this.props);
+            new lambda.Function(stack, this.id, this.props);
         });
 
-        const bucket_template = templates[0];
+        const template = templates[0];
 
         // Do additional translation
         
-        await this.stack.engine.addResource(this.id, bucket_template);
+        await this.stack.engine.addResource(this.id, template);
 
         // update the stack cloudformation with a definition for this bucket and update the stack in AWS
         await this.stack.engine.commit(allowUserInteraction);

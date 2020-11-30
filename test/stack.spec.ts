@@ -1,21 +1,12 @@
-import { Stack, StackProps, Bucket, Task } from "../src";
-import { expect } from "chai";
-import AWS from "aws-sdk";
-import { CloudFormation } from "aws-sdk";
+import { Stack, StackProps, Bucket } from "../src";
+import * as TestUtils from "./test_utils";
 
-import fs from "fs";
-
-const keys = JSON.parse(fs.readFileSync("./secrets.json", "utf-8"));
-AWS.config.update({
-    accessKeyId: keys.accessKeyId,
-    secretAccessKey: keys.secretAccessKey,
-    region: "us-east-2",
-});
+TestUtils.setupAWS();
 
 // const CLEANUP = false;
 const CLEANUP = true;
 
-describe("NoDSL", function () {
+describe("NoDSL Stack", function () {
     let testId: string;
 
     // Before each test, generate a new testId. This is used to ensure values
@@ -30,32 +21,7 @@ describe("NoDSL", function () {
 
     // After all tests are run, delete all stacks that were created
     after(async function () {
-        if (!CLEANUP) {
-            return;
-        }
-
-        const cfClient = new CloudFormation();
-        const stackRes = await cfClient.listStacks().promise();
-        const stacks: CloudFormation.ListStacksOutput =
-            stackRes.$response.data || {};
-        for (const stack of stacks.StackSummaries || []) {
-            if (stack.StackStatus === "DELETE_COMPLETE") {
-                continue;
-            }
-            console.log(stack.StackName);
-            if (!stack.StackName.includes(process.env.USER as string)) {
-                continue;
-            }
-            await cfClient
-                .deleteStack({
-                    StackName: stack.StackName,
-                })
-                .promise();
-            await cfClient.waitFor("stackDeleteComplete", {
-                StackName: stack.StackName,
-            });
-            console.log(`Deleted ${stack.StackName}`);
-        }
+        await TestUtils.cleanStacks(CLEANUP);
     });
 
     it.skip("Handles vanilla CDK code", async function () {
@@ -70,7 +36,6 @@ describe("NoDSL", function () {
                     "CloudFormationIDSimpleBucket",
                     {
                         bucketName: `stackur-public-bucket-${testId}`,
-                        // tags: [{Key: 'SampleTag', Value: 'TagValue'}],
                     }
                 );
 
@@ -88,90 +53,7 @@ describe("NoDSL", function () {
         await myStack.commit();
     });
 
-    it.skip("Handles non-vanilla CDK code", async () => {
-        class MyComplexStack extends Stack {
-            public storage?: Bucket;
-
-            // Notice that creation logic moved to the setup method
-            protected async setup(): Promise<void> {
-                // Allocate bucket as before
-                this.storage = new Bucket(
-                    this,
-                    "CloudFormationIDComplexStack",
-                    {
-                        bucketName: `stackur-public-bucket-${testId}`,
-                    }
-                );
-
-                new Task(this, {
-                    task: async () => {
-                        console.log("Some custom logic!");
-                    },
-                    condition: async () => {
-                        return true;
-                    },
-                });
-
-                new Task(this, {
-                    task: async () => {
-                        console.log(
-                            "Notice that logic was executed after resources were created...GOOD!"
-                        );
-                    },
-                });
-            }
-        }
-
-        const myStack = new MyComplexStack(`MyComplexStack${testId}`);
-
-        // actually go create this thing. I don't care that the stack has a post
-        // constructor setup stage because commit takes care of that
-        await myStack.commit();
-    });
-
-    it.skip("Handles resource and task mixing", async () => {
-        class MyComplexStack extends Stack {
-            public storage?: Bucket;
-            public storage2?: Bucket;
-
-            // Notice that creation logic moved to the setup method
-            protected async setup(): Promise<void> {
-                // Allocate bucket as before
-                this.storage = new Bucket(this, "Bucket1", {
-                    bucketName: `stackur-public-bucket-${testId}`,
-                });
-
-                new Task(this, {
-                    task: async () => {
-                        console.log("Some custom logic!");
-                        console.log(
-                            "Notice that logic was executed after resources were created...GOOD!"
-                        );
-                    },
-                });
-
-                this.storage2 = new Bucket(this, "Bucket2", {
-                    bucketName: `stackur-public-bucket2-${testId}`,
-                });
-            }
-        }
-
-        const myStack = new MyComplexStack(`MyComplexStack${testId}`);
-
-        // actually go create this thing. I don't care that the stack has a post
-        // constructor setup stage because commit takes care of that
-        await myStack.commit();
-    });
-
-    it.skip("Allows for interactive confirmation of each commit", async () => {});
-
-    it.skip("Generates Cloud formation script as it commits", async () => {});
-
-    it.skip("Generates diff between commits to understand required changes", async () => {});
-
-    it.skip("Loads existing cloudformation to ensure old resources are not recreated", async () => {});
-
-    it("Single Resource Commit", async () => {
+    it.skip("Allows for interactive confirmation of each commit", async () => {
         class MyComplexStack extends Stack {
             public storage?: Bucket;
 
@@ -192,4 +74,6 @@ describe("NoDSL", function () {
         // constructor setup stage because commit takes care of that
         await myStack.commit(true);
     });
+
+    it.skip("Generates diff between commits to understand required changes", async () => {});
 });
