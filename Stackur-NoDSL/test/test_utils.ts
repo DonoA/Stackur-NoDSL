@@ -1,5 +1,5 @@
-import AWS from "aws-sdk";
 import { CloudFormation } from "aws-sdk";
+import { awsAuthenticate } from "../src";
 
 import fs from "fs";
 
@@ -12,7 +12,7 @@ export function setupAWS() {
     configured = true;
 
     const keys = JSON.parse(fs.readFileSync("./secrets.json", "utf-8"));
-    AWS.config.update({
+    awsAuthenticate({
         accessKeyId: keys.accessKeyId,
         secretAccessKey: keys.secretAccessKey,
         region: "us-east-2",

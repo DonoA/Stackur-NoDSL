@@ -4,6 +4,7 @@
 
 export * from './resource';
 export * from './task';
+export * from './util';
 
 export * from './stack';
 
