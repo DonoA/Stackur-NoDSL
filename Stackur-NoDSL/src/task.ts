@@ -16,12 +16,14 @@ interface TaskProps {
  */
 export class Task extends Committable {
     private stack: Stack;
+    private name: string;
     private task: TaskCallback;
     private condition?: TaskCondition;
     
-    constructor(stack: Stack, props: TaskProps) {
+    constructor(stack: Stack, name: string, props: TaskProps) {
         super();
         this.stack = stack;
+        this.name = name;
         this.task = props.task;
         this.condition = props.condition;
 
@@ -35,12 +37,14 @@ export class Task extends Committable {
      * @param force Force the task to execute regardless of condition
      */
     async commit(force: boolean = false) {
+        this.stack.logger.info(`Running Task ${this.name}`);
+
         let condResult = this.condition?.();
         if(condResult instanceof Promise) {
             condResult = await condResult;
         }
 
-        if(!condResult && !force) {
+        if(this.condition !== undefined && !condResult && !force) {
             return;
         }
 

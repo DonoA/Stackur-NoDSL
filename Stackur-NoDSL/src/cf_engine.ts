@@ -1,6 +1,8 @@
-import { CloudFormation } from "aws-sdk";
+import AWS from "aws-sdk";
 import { Interaction } from "../src/interaction";
 import { exit } from "process";
+import { Logger, LogLevel } from "./logger";
+
 export interface CFResource {
     Type: string;
     Properties: any;
@@ -11,6 +13,10 @@ export interface CFTemplate {
     // Poor man's map from strings to resources
     // this is done for easy serialization
     Resources: { [id: string]: CFResource };
+}
+
+export interface CFEngineProps {
+    logger: Logger
 }
 
 /**
@@ -30,16 +36,23 @@ export interface CFTemplate {
 
 export class CFEngine {
     private stackName: string;
-    private client: CloudFormation;
+    private client: AWS.CloudFormation;
 
     private localTemplate: CFTemplate;
     private remoteTemplate?: CFTemplate;
     private isSetup: boolean = false;
     private stackExists: boolean = false;
 
-    constructor(stackName: string) {
+    private arnMap: Map<string, string> = new Map<string, string>();
+
+    readonly props?: CFEngineProps;
+    readonly logger: Logger;
+
+    constructor(stackName: string, props?: CFEngineProps) {
         this.stackName = stackName;
-        this.client = new CloudFormation();
+        this.client = new AWS.CloudFormation();
+        this.props = props;
+        this.logger = this.props?.logger || new Logger(LogLevel.Log);
 
         this.localTemplate = {
             AWSTemplateFormatVersion: "2010-09-09",
@@ -74,7 +87,7 @@ export class CFEngine {
         }
 
         // if remote stack exists, fetch the template so we can build diff against it
-        await this.getRemoteTemplate();
+        await this.syncRemoteState();
     }
 
     /**
@@ -83,9 +96,9 @@ export class CFEngine {
      * Currently the remoteTemplate is not used, however at some point it may
      * be helpful for showing changes.
      */
-    private async getRemoteTemplate(): Promise<CFTemplate | undefined> {
+    private async syncRemoteState(): Promise<void> {
         if (!this.stackExists) {
-            return undefined;
+            return;
         }
 
         const template = await this.client
@@ -93,13 +106,29 @@ export class CFEngine {
                 StackName: this.stackName,
             })
             .promise();
+
         if (template.TemplateBody) {
             this.remoteTemplate = JSON.parse(template.TemplateBody);
         } else {
             this.remoteTemplate = undefined;
         }
 
-        return this.remoteTemplate;
+        const remoteResources = await this.client.describeStackResources({
+            StackName: this.stackName
+        }).promise();
+
+        this.arnMap.clear();
+        remoteResources.StackResources?.forEach((resource) => {
+            if(!resource.PhysicalResourceId) {
+                return;
+            }
+
+            this.arnMap.set(resource.LogicalResourceId, resource.PhysicalResourceId);
+        });
+    }
+
+    getArnFor(resourceName: string): string | undefined {
+        return this.arnMap.get(resourceName);
     }
 
     /**
@@ -109,16 +138,16 @@ export class CFEngine {
      * @param name The resource name to be displayed in the AWS console
      * @param resource The resource object that will be submitted for creation
      */
-    async addResource(name: string, resource: CFResource) {
+    async addResource(name: string, cfResource: CFResource) {
         await this.setup();
 
-        this.localTemplate.Resources[name] = resource;
+        this.localTemplate.Resources[name] = cfResource;
     }
 
     /**
      * List all the event this stack has had. Ever.
      */
-    private async getEvents(): Promise<CloudFormation.StackEvent[]> {
+    private async getEvents(): Promise<AWS.CloudFormation.StackEvent[]> {
         const res = await this.client
             .describeStackEvents({
                 StackName: this.stackName,
@@ -139,7 +168,7 @@ export class CFEngine {
      * @returns The non-undefined value returned by callback
      */
     private async watchNewEvents<T>(
-        callback: (event: CloudFormation.StackEvent) => Promise<T>
+        callback: (event: AWS.CloudFormation.StackEvent) => Promise<T>
     ): Promise<T> {
         let eventCount = (await this.getEvents()).length;
         return new Promise((res, rej) => {
@@ -175,7 +204,7 @@ export class CFEngine {
         // console.log(thing);
         // do nothing if we can
         if (changeSet.StatusReason?.includes("didn't contain changes.")) {
-            console.log("no changes required!");
+            this.logger.log("no changes required!");
             return;
         }
 
@@ -197,7 +226,7 @@ export class CFEngine {
             let allow = await userInteraction.confirmChanges(changeSet);
             userInteraction.close();
             if (allow == false) {
-                console.log(
+                this.logger.log(
                     "Changes not accepted\nPlease make proper changes and accept to commit"
                 );
                 return;
@@ -205,7 +234,9 @@ export class CFEngine {
         }
         await this.executeChangeSet(changeSetName);
         this.stackExists = true;
-        await this.getRemoteTemplate();
+        await this.syncRemoteState();
+
+
     }
 
     /**
@@ -215,7 +246,7 @@ export class CFEngine {
      */
     private async createChangeSet(
         changeSetName: string
-    ): Promise<CloudFormation.DescribeChangeSetOutput> {
+    ): Promise<AWS.CloudFormation.DescribeChangeSetOutput> {
         const changeSetSettings = {
             StackName: this.stackName,
             ChangeSetName: changeSetName,
@@ -265,11 +296,9 @@ export class CFEngine {
             .promise();
 
         await this.watchNewEvents(async (event) => {
-            console.log(
-                `${event.ResourceStatus} => ${event.ResourceStatusReason}`
+            this.logger.debug(
+                `(${event.ResourceType}) ${event.ResourceStatus} => ${event.ResourceStatusReason}`
             );
-            console.log(event.ResourceType);
-            console.log(event.ResourceProperties);
 
             if (event.ResourceStatus === "ROLLBACK_COMPLETE") {
                 return true;
@@ -300,10 +329,10 @@ export class CFEngine {
      * print the local and remote templates for viewing
      */
     dumpCF() {
-        console.log("Local:");
-        console.log(JSON.stringify(this.localTemplate));
+        this.logger.debug("Local:");
+        this.logger.debug(JSON.stringify(this.localTemplate));
 
-        console.log("Remote:");
-        console.log(JSON.stringify(this.remoteTemplate));
+        this.logger.debug("Remote:");
+        this.logger.debug(JSON.stringify(this.remoteTemplate));
     }
 }

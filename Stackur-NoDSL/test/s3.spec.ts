@@ -1,4 +1,4 @@
-import { Stack, Bucket } from "../src";
+import { Stack, Bucket, Logger, LogLevel } from "../src";
 import * as TestUtils from "./test_utils";
 
 TestUtils.setupAWS();
@@ -25,28 +25,28 @@ describe("NoDSL S3 Buckets", function () {
     });
 
 
-    it.skip("Can be created", async () => {
+    it("Can be created", async () => {
         class MyComplexStack extends Stack {
             public storage?: Bucket;
 
             // Notice that creation logic moved to the setup method
             protected async setup(): Promise<void> {
                 // Allocate bucket as before
-                this.storage = new Bucket(
-                    this,
-                    "CloudFormationIDComplexStack",
-                    {
-                        bucketName: `stackur-public-bucket-${testId}`,
-                    }
-                );
+                this.storage = new Bucket(this, "bucket", {
+                    bucketName: `stackur-public-bucket-${testId}`,
+                });
             }
         }
 
-        const myStack = new MyComplexStack(`MyComplexStack${testId}`);
+        const myStack = new MyComplexStack(`MyComplexStack${testId}`, {
+            logger: new Logger(LogLevel.Debug)
+        });
 
         // actually go create this thing. I don't care that the stack has a post
         // constructor setup stage because commit takes care of that
         await myStack.commit();
+
+        console.log(`Created bucket arn: ${myStack.storage?.arn}`);
     });
 
     it.skip("Can have CDK style tags", async () => {

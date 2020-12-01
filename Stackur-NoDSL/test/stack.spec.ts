@@ -75,5 +75,49 @@ describe("NoDSL Stack", function () {
         await myStack.commit(true);
     });
 
-    it.skip("Generates diff between commits to understand required changes", async () => { });
+    it.skip("Generates diff between commits to understand required changes", async () => { 
+        const stackName = `MyComplexStack${testId}`;
+
+        class Stack1 extends Stack {
+            public storage?: Bucket;
+
+            // Notice that creation logic moved to the setup method
+            protected async setup(): Promise<void> {
+                // Allocate bucket as before
+                this.storage = new Bucket(this, "Bucket1", {
+                    bucketName: `stackur-public-bucket-${testId}`,
+                });
+            }
+        }
+
+        const myStack1 = new Stack1(stackName);
+
+        // actually go create this thing. I don't care that the stack has a post
+        // constructor setup stage because commit takes care of that
+        await myStack1.commit();
+
+        console.log("STACK 1 COMPLETED")
+
+        class Stack2 extends Stack {
+            public storage?: Bucket;
+
+            // Notice that creation logic moved to the setup method
+            protected async setup(): Promise<void> {
+                // Allocate bucket as before
+                this.storage = new Bucket(this, "Bucket1", {
+                    bucketName: `stackur-public-bucket-${testId}`,
+                    publicReadAccess: true,
+                    versioned: true,
+                });
+            }
+        }
+
+        const myStack2 = new Stack2(stackName);
+
+        // actually go create this thing. I don't care that the stack has a post
+        // constructor setup stage because commit takes care of that
+        await myStack2.commit();
+
+        console.log("STACK 2 COMPLETED");
+    });
 });

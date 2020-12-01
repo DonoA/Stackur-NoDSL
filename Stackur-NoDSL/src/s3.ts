@@ -12,6 +12,8 @@ import { cdkPropTranslate } from './cdk_prop_translate';
  */
 import { BucketProps as CDKBucketProps } from "@aws-cdk/aws-s3";
 
+export { BucketAccessControl } from "@aws-cdk/aws-s3";
+
 interface NDSLBucketProps { }
 
 type BucketProps = CDKBucketProps & NDSLBucketProps;
@@ -24,6 +26,7 @@ export { BucketProps };
  */
 export class Bucket extends Resource {
     private props: BucketProps;
+    private cdkBucket?: s3.Bucket;
 
     constructor(stack: Stack, id: string, props: BucketProps = {}) {
         super(stack, id);
@@ -31,19 +34,28 @@ export class Bucket extends Resource {
     }
 
     async commit(allowUserInteraction: boolean) {
+        this.stack.logger.info(`Creating Bucket ${this.id}`);
+
         await super.commit(allowUserInteraction);
 
         const templates = cdkPropTranslate((stack) => {
-            new s3.Bucket(stack, this.id, this.props);
+            this.cdkBucket = new s3.Bucket(stack, this.id, this.props);
         });
 
-        const bucket_template = templates[0];
+        this.stack.logger.debug(this.cdkBucket);
+
+        const bucketTemplate = templates[0];
+        this.stack.logger.debug(bucketTemplate);
 
         // Do additional translation
         
-        await this.stack.engine.addResource(this.id, bucket_template);
+        await this.stack.engine.addResource(this.id, bucketTemplate);
 
         // update the stack cloudformation with a definition for this bucket and update the stack in AWS
         await this.stack.engine.commit(allowUserInteraction);
+
+        this.arn = this.stack.engine.getArnFor(this.id);
+
+        this.stack.logger.info(`Created Bucket ${this.id}`);
     }
 }

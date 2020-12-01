@@ -1,11 +1,15 @@
 import { CFEngine } from "./cf_engine";
 import { Committable } from "./commitable";
+import { Logger, LogLevel } from "./logger";
+import AWS from "aws-sdk";
 
 /**
  * Interface that defines the configuration that can be applied to any stack
  */
 export interface StackProps {
-    workingDir: string;
+    workingDir?: string;
+    logger?: Logger;
+    region?: string;
 }
 
 /**
@@ -25,22 +29,21 @@ export abstract class Stack {
     private name: string;
     private props?: StackProps;
     readonly engine: CFEngine;
+    readonly logger: Logger;
+    readonly region?: string;
 
-    private exists: boolean = false;
     private commited: boolean = false;
-
-    // This is where the defaults will go. The pattern of optional props followed by
-    // constant defaults should used in all other resource classes as well (such as Bucket)
-    private static DEFAULT_PROPS: StackProps = {
-        workingDir: "./output",
-    };
 
     private stages: Committable[] = [];
 
     constructor(name: string, props?: StackProps) {
         this.name = name;
         this.props = props;
-        this.engine = new CFEngine(name);
+        this.region = props?.region || AWS.config.region;
+        this.logger = this.props?.logger || new Logger(LogLevel.Log);
+        this.engine = new CFEngine(name, {
+            logger: this.logger
+        });
     }
 
     /**
@@ -65,6 +68,8 @@ export abstract class Stack {
      * Commits all uncommited resources within the stack. Essentially creates the stack in AWS.
      */
     async commit(allowUserInteraction: boolean = false): Promise<void> {
+        this.logger.log(`Commiting ${this.name}`);
+
         this.commited = true;
         await this.setup();
         await this.engine.setup();

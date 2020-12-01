@@ -4,8 +4,10 @@
 
 export * from './resource';
 export * from './task';
-export * from './util';
 
 export * from './stack';
 
 export * from './s3';
+
+export * from './util';
+export * from './logger';

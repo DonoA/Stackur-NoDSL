@@ -1,4 +1,4 @@
-import { Stack, Bucket, awsAuthenticate } from "stackur-nodsl";
+import { Stack, Bucket, awsAuthenticate, Logger, LogLevel } from "stackur-nodsl";
 import fs from "fs";
 
 const keys = JSON.parse(fs.readFileSync("./secrets.json", "utf-8"));
@@ -19,7 +19,9 @@ class ApplicationStack extends Stack {
 }
 
 (async () => {
-    const appStack = new ApplicationStack("WebsiteStack");
+    const appStack = new ApplicationStack("WebsiteStack", {
+        logger: new Logger(LogLevel.Info),
+    });
 
     await appStack.commit();
 })();

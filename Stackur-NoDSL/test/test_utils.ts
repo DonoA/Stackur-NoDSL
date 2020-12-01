@@ -32,7 +32,6 @@ export async function cleanStacks(CLEANUP: boolean) {
         if (stack.StackStatus === "DELETE_COMPLETE") {
             continue;
         }
-        console.log(stack.StackName);
         if (!stack.StackName.includes(process.env.USER as string)) {
             continue;
         }

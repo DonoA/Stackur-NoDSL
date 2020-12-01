@@ -40,7 +40,7 @@ describe("NoDSL Tasks", function () {
                     }
                 );
 
-                new Task(this, {
+                new Task(this, "Custom Logic", {
                     task: async () => {
                         console.log("Some custom logic!");
                     },
@@ -49,7 +49,7 @@ describe("NoDSL Tasks", function () {
                     },
                 });
 
-                new Task(this, {
+                new Task(this, "Custom Logic", {
                     task: async () => {
                         console.log(
                             "Notice that logic was executed after resources were created...GOOD!"
@@ -78,7 +78,7 @@ describe("NoDSL Tasks", function () {
                     bucketName: `stackur-public-bucket-${testId}`,
                 });
 
-                new Task(this, {
+                new Task(this, "Custom Logic", {
                     task: async () => {
                         console.log("Some custom logic!");
                         console.log(
