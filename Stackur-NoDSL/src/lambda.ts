@@ -30,8 +30,8 @@ export class Function extends Resource {
         this.props = props;
     }
 
-    async commit(allowUserInteraction: boolean) {
-        await super.commit(allowUserInteraction);
+    async commit() {
+        await super.commit();
 
         const templates = cdkPropTranslate((stack) => {
             new lambda.Function(stack, this.id, this.props);
@@ -44,6 +44,6 @@ export class Function extends Resource {
         await this.stack.engine.addResource(this.id, template);
 
         // update the stack cloudformation with a definition for this bucket and update the stack in AWS
-        await this.stack.engine.commit(allowUserInteraction);
+        await this.stack.engine.commit();
     }
 }

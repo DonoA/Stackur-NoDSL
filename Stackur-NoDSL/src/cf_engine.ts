@@ -16,7 +16,8 @@ export interface CFTemplate {
 }
 
 export interface CFEngineProps {
-    logger: Logger
+    logger?: Logger,
+    interactive?: boolean,
 }
 
 /**
@@ -190,13 +191,25 @@ export class CFEngine {
         });
     }
 
+    async uncommit() {
+        await this.client
+            .deleteStack({
+                StackName: this.stackName,
+            })
+            .promise();
+        await this.client.waitFor("stackDeleteComplete", {
+            StackName: this.stackName,
+        });
+    }
+
+
     /**
      * Sends the stack to AWS.
      *
      * First a change set is created for the new resources. Then the change
      * set is executed if it is acceptable.
      */
-    async commit(allowUserInteraction: boolean) {
+    async commit() {
         const changeSetName = `${process.env.USER}-${new Date().getTime()}`;
 
         const changeSet = await this.createChangeSet(changeSetName);
@@ -220,7 +233,7 @@ export class CFEngine {
         // console.log("CHANGESET");
         // console.log(changeSet);
 
-        if (allowUserInteraction == true) {
+        if (this.props?.interactive === true) {
             // let allow = true;
             let userInteraction = new Interaction();
             let allow = await userInteraction.confirmChanges(changeSet);
@@ -229,14 +242,25 @@ export class CFEngine {
                 this.logger.log(
                     "Changes not accepted\nPlease make proper changes and accept to commit"
                 );
+                
+                await this.client.deleteChangeSet({
+                    StackName: this.stackName,
+                    ChangeSetName: changeSetName,
+                }).promise();
+
+                if(!this.stackExists) {
+                    await this.client.deleteStack({
+                        StackName: this.stackName
+                    }).promise();
+                }
+
+                process.exit(1);
                 return;
             }
         }
         await this.executeChangeSet(changeSetName);
         this.stackExists = true;
         await this.syncRemoteState();
-
-
     }
 
     /**

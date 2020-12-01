@@ -10,6 +10,7 @@ export interface StackProps {
     workingDir?: string;
     logger?: Logger;
     region?: string;
+    interactive?: boolean;
 }
 
 /**
@@ -32,7 +33,7 @@ export abstract class Stack {
     readonly logger: Logger;
     readonly region?: string;
 
-    private commited: boolean = false;
+    private isSetup: boolean = false;
 
     private stages: Committable[] = [];
 
@@ -42,7 +43,8 @@ export abstract class Stack {
         this.region = props?.region || AWS.config.region;
         this.logger = this.props?.logger || new Logger(LogLevel.Log);
         this.engine = new CFEngine(name, {
-            logger: this.logger
+            logger: this.logger,
+            interactive: props?.interactive,
         });
     }
 
@@ -67,29 +69,46 @@ export abstract class Stack {
     /**
      * Commits all uncommited resources within the stack. Essentially creates the stack in AWS.
      */
-    async commit(allowUserInteraction: boolean = false): Promise<void> {
-        this.logger.log(`Commiting ${this.name}`);
+    async commit(): Promise<void> {
+        this.logger.log(`Committing ${this.name}`);
 
-        this.commited = true;
-        await this.setup();
-        await this.engine.setup();
+        if(!this.isSetup) {
+            await this.engine.setup();
+            await this.setup();
+            this.isSetup = true;
+        }
+
 
         for (const resource of this.stages) {
             // Stages get compiled together and submitted as a change set
             // calculated what changes will be made
-            await resource.commit(allowUserInteraction, true);
+            await resource.commit(true);
         }
 
         // just to clean up anything that didn't get commited for some reason
         // await this.engine.commit(false);
     }
 
-    addStage(resource: Committable) {
-        this.stages.push(resource);
+    async uncommit(): Promise<void> {
+        this.logger.log(`Uncommitting ${this.name}`);
+    
+        if(!this.isSetup) {
+            await this.engine.setup();
+            await this.setup();
+            this.isSetup = true;
+        }
+
+        for (const resource of this.stages) {
+            // Stages get compiled together and submitted as a change set
+            // calculated what changes will be made
+            await resource.uncommit();
+        }
+
+        await this.engine.uncommit();
     }
 
-    isCommited(): boolean {
-        return this.commited;
+    addStage(resource: Committable) {
+        this.stages.push(resource);
     }
 
     getName(): string {

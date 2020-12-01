@@ -8,8 +8,7 @@
 export abstract class Committable {
     public commited: boolean = false;
 
-    abstract async commit(
-        allowUserInteraction: boolean,
-        force?: boolean
-    ): Promise<void>;
+    abstract async commit(force?: boolean): Promise<void>;
+
+    abstract async uncommit(): Promise<void>;
 }

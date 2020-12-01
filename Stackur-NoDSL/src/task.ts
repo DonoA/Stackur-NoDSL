@@ -53,4 +53,6 @@ export class Task extends Committable {
             await taskResult;
         }
     }
+
+    async uncommit() { }
 }

@@ -68,11 +68,13 @@ describe("NoDSL Stack", function () {
 
         // readline user input object
 
-        const myStack = new MyComplexStack(`MyComplexStack${testId}`);
+        const myStack = new MyComplexStack(`MyComplexStack${testId}`, {
+            interactive: true
+        });
 
         // actually go create this thing. I don't care that the stack has a post
         // constructor setup stage because commit takes care of that
-        await myStack.commit(true);
+        await myStack.commit();
     });
 
     it.skip("Generates diff between commits to understand required changes", async () => { 

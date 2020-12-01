@@ -27,7 +27,7 @@ export abstract class Resource extends Committable {
      *
      * This method is essentially a compile method.
      */
-    async commit(allowUserInteraction: boolean) {
+    async commit() {
         this.commited = true;
     }
 
@@ -36,5 +36,5 @@ export abstract class Resource extends Committable {
      * as the backing CF engine is simply called to destroy the
      * whole stack.
      */
-    async destroy() {}
+    async uncommit() { }
 }

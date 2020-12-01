@@ -11,6 +11,7 @@ import { cdkPropTranslate } from './cdk_prop_translate';
  * this is a CDK class
  */
 import { BucketProps as CDKBucketProps } from "@aws-cdk/aws-s3";
+import AWS from "aws-sdk";
 
 export { BucketAccessControl } from "@aws-cdk/aws-s3";
 
@@ -31,18 +32,18 @@ export class Bucket extends Resource {
     constructor(stack: Stack, id: string, props: BucketProps = {}) {
         super(stack, id);
         this.props = props;
+
+        this.arn = this.stack.engine.getArnFor(this.id);
     }
 
-    async commit(allowUserInteraction: boolean) {
+    async commit() {
         this.stack.logger.info(`Creating Bucket ${this.id}`);
 
-        await super.commit(allowUserInteraction);
+        await super.commit();
 
         const templates = cdkPropTranslate((stack) => {
             this.cdkBucket = new s3.Bucket(stack, this.id, this.props);
         });
-
-        this.stack.logger.debug(this.cdkBucket);
 
         const bucketTemplate = templates[0];
         this.stack.logger.debug(bucketTemplate);
@@ -52,10 +53,49 @@ export class Bucket extends Resource {
         await this.stack.engine.addResource(this.id, bucketTemplate);
 
         // update the stack cloudformation with a definition for this bucket and update the stack in AWS
-        await this.stack.engine.commit(allowUserInteraction);
+        await this.stack.engine.commit();
 
         this.arn = this.stack.engine.getArnFor(this.id);
 
         this.stack.logger.info(`Created Bucket ${this.id}`);
+    }
+
+    async uncommit() {
+        if(!this.arn) {
+            return;
+        }
+
+        this.stack.logger.info(`Destroying Bucket ${this.id}`);
+
+        const client = new AWS.S3();
+        const objects = await client.listObjects({
+            Bucket: this.arn as string,
+        }).promise();
+
+        this.stack.logger.info(`Removing ${objects.Contents?.length} objects`);
+
+        for(const object of objects.Contents || []) {
+            await client.deleteObject({
+                Bucket: this.arn as string,
+                Key: object.Key as string
+            }).promise();
+        }
+
+        const versions = await client.listObjectVersions({
+            Bucket: this.arn as string,
+        }).promise();
+
+        this.stack.logger.info(`Removing ${versions.Versions?.length} versions`);
+
+        for(const version of versions.Versions || []) {
+            await client.deleteObject({
+                Bucket: this.arn as string,
+                Key: version.Key as string
+            }).promise();
+        }
+
+        await client.deleteBucket({
+            Bucket: this.arn as string,
+        });
     }
 }
