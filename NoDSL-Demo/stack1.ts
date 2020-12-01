@@ -21,6 +21,7 @@ class ApplicationStack extends Stack {
 (async () => {
     const appStack = new ApplicationStack("WebsiteStack", {
         logger: new Logger(LogLevel.Info),
+        interactive: true
     });
 
     await appStack.commit();

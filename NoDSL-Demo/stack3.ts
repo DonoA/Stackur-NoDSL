@@ -1,4 +1,4 @@
-import { Stack, Bucket, awsAuthenticate, Task, Logger, LogLevel, BucketAccessControl } from "stackur-nodsl";
+import { Stack, Bucket, awsAuthenticate, Task, Logger, LogLevel, BucketAccessControl, CommandLineExecutor } from "stackur-nodsl";
 import fs from "fs";
 import AWS from "aws-sdk";
 
@@ -8,7 +8,6 @@ awsAuthenticate({
     secretAccessKey: keys.secretAccessKey,
     region: "us-east-2",
 });
-
 
 class ApplicationStack extends Stack {
     protected storage?: Bucket;
@@ -47,6 +46,8 @@ class ApplicationStack extends Stack {
     const appStack = new ApplicationStack("WebsiteStack", {
         logger: new Logger(LogLevel.Info),
     });
+
+    const commandLineExec = CommandLineExecutor.for(appStack);
     
-    await appStack.uncommit();
+    await commandLineExec.execute(process.argv.slice(2));
 })();

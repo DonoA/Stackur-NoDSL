@@ -11,3 +11,4 @@ export * from './s3';
 
 export * from './util';
 export * from './logger';
+export * from './cli_arg_parser';

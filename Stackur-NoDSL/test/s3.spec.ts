@@ -41,6 +41,7 @@ describe("NoDSL S3 Buckets", function () {
         const myStack = new MyComplexStack(`MyComplexStack${testId}`, {
             logger: new Logger(LogLevel.Debug)
         });
+        TestUtils.trackStack(myStack);
 
         // actually go create this thing. I don't care that the stack has a post
         // constructor setup stage because commit takes care of that
@@ -67,6 +68,7 @@ describe("NoDSL S3 Buckets", function () {
         }
 
         const myStack = new MyComplexStack(`MyComplexStack${testId}`);
+        TestUtils.trackStack(myStack);
 
         // actually go create this thing. I don't care that the stack has a post
         // constructor setup stage because commit takes care of that
@@ -91,6 +93,7 @@ describe("NoDSL S3 Buckets", function () {
         }
 
         const myStack = new MyComplexStack(`MyComplexStack${testId}`);
+        TestUtils.trackStack(myStack);
 
         // actually go create this thing. I don't care that the stack has a post
         // constructor setup stage because commit takes care of that

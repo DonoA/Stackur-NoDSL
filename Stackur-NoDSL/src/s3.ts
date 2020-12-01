@@ -68,11 +68,11 @@ export class Bucket extends Resource {
         this.stack.logger.info(`Destroying Bucket ${this.id}`);
 
         const client = new AWS.S3();
-        const objects = await client.listObjects({
+        const objects = await client.listObjectsV2({
             Bucket: this.arn as string,
         }).promise();
 
-        this.stack.logger.info(`Removing ${objects.Contents?.length} objects`);
+        this.stack.logger.debug(`Removing ${objects.Contents?.length} objects`);
 
         for(const object of objects.Contents || []) {
             await client.deleteObject({
@@ -81,21 +81,22 @@ export class Bucket extends Resource {
             }).promise();
         }
 
-        const versions = await client.listObjectVersions({
+        // Unclear if versions need removal, right now it seems they don't
+        // const versions = await client.listObjectVersions({
+        //     Bucket: this.arn as string,
+        // }).promise();
+
+        // this.stack.logger.info(`Removing ${versions.Versions?.length} versions`);
+
+        // for(const version of versions.Versions || []) {
+        //     await client.deleteObject({
+        //         Bucket: this.arn as string,
+        //         Key: version.Key as string
+        //     }).promise();
+        // }
+
+        const res = await client.deleteBucket({
             Bucket: this.arn as string,
         }).promise();
-
-        this.stack.logger.info(`Removing ${versions.Versions?.length} versions`);
-
-        for(const version of versions.Versions || []) {
-            await client.deleteObject({
-                Bucket: this.arn as string,
-                Key: version.Key as string
-            }).promise();
-        }
-
-        await client.deleteBucket({
-            Bucket: this.arn as string,
-        });
     }
 }

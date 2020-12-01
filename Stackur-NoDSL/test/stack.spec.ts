@@ -48,6 +48,7 @@ describe("NoDSL Stack", function () {
 
         // Create a new instance of this stack, this would likely be one stage. Lets pretend it's beta.
         const myStack = new MySimpleStack(`MySimpleStack${testId}`);
+        TestUtils.trackStack(myStack);
 
         // actually go create this thing (this part is not in the CDK and would need to be added to existing CDK scripts)
         await myStack.commit();
@@ -71,6 +72,8 @@ describe("NoDSL Stack", function () {
         const myStack = new MyComplexStack(`MyComplexStack${testId}`, {
             interactive: true
         });
+        TestUtils.trackStack(myStack);
+
 
         // actually go create this thing. I don't care that the stack has a post
         // constructor setup stage because commit takes care of that
@@ -93,6 +96,7 @@ describe("NoDSL Stack", function () {
         }
 
         const myStack1 = new Stack1(stackName);
+        TestUtils.trackStack(myStack1);
 
         // actually go create this thing. I don't care that the stack has a post
         // constructor setup stage because commit takes care of that
@@ -115,6 +119,7 @@ describe("NoDSL Stack", function () {
         }
 
         const myStack2 = new Stack2(stackName);
+        TestUtils.trackStack(myStack2);
 
         // actually go create this thing. I don't care that the stack has a post
         // constructor setup stage because commit takes care of that

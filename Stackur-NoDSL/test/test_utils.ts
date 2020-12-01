@@ -1,5 +1,5 @@
 import { CloudFormation } from "aws-sdk";
-import { awsAuthenticate } from "../src";
+import { awsAuthenticate, Stack } from "../src";
 
 import fs from "fs";
 
@@ -19,32 +19,23 @@ export function setupAWS() {
     });
 }
 
+let stacks: Stack[] = []
+
 export async function cleanStacks(CLEANUP: boolean) {
     if (!CLEANUP) {
         return;
     }
 
-    const cfClient = new CloudFormation();
-    const stackRes = await cfClient.listStacks().promise();
-    const stacks: CloudFormation.ListStacksOutput =
-        stackRes.$response.data || {};
-    for (const stack of stacks.StackSummaries || []) {
-        if (stack.StackStatus === "DELETE_COMPLETE") {
-            continue;
-        }
-        if (!stack.StackName.includes(process.env.USER as string)) {
-            continue;
-        }
-        await cfClient
-            .deleteStack({
-                StackName: stack.StackName,
-            })
-            .promise();
-        await cfClient.waitFor("stackDeleteComplete", {
-            StackName: stack.StackName,
-        });
-        console.log(`Deleted ${stack.StackName}`);
+    for(const stack of stacks) {
+        await stack.uncommit();
+        console.log(`Deleted ${stack.getName()}`);
     }
+
+    stacks = [];
+}
+
+export function trackStack(stack: Stack) {
+    stacks.push(stack);
 }
 
 

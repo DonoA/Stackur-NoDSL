@@ -9,7 +9,6 @@ awsAuthenticate({
     region: "us-east-2",
 });
 
-
 class ApplicationStack extends Stack {
     protected storage?: Bucket;
 
